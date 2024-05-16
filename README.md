@@ -34,6 +34,10 @@ At the end of the training a new directory ./model_chkpt/. will be created to sa
 # Dataset
 The processed data can be place here - PhASER_ICML_CodeBase/processed_data or the absolute path for the dataset can be given as an argument.
 
+
+# TODO :
+* Add citation details here.
+
 The dataset can be obtained at the following sources : <br>
 1. [WISDM](https://researchdata.ntu.edu.sg/dataset.xhtml?persistentId=doi:10.21979/N9/KJWE5B)
 2. [UCIHAR](https://researchdata.ntu.edu.sg/dataset.xhtml?persistentId=doi:10.21979/N9/0SYHTZ)
