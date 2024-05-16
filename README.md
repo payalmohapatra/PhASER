@@ -8,6 +8,11 @@
   </a> -->
 </div>
 
+![System_Diagram](https://github.com/payalmohapatra/PhASER/blob/main/render/NIPsMainTSDGRevamp.png)
+
+
+
+
 Here we provide all the required scripts to reproduce the results from the last row of Tables 2, 3 and 4 in the main paper. These will demonstrate the performance of PhASER on 5 datasets.
 
 # Requirement 
