@@ -553,58 +553,80 @@ def evaluate_ood_one_epoch(trgt_loader, model, class_loss_criterion):
         class_acc_valid = correct_v/len(class_loss_list)
     return class_loss_valid, class_acc_valid
 
+# Initialize variables to track the best model
+best_val_ood_acc = 0.0
+best_epoch = 0
+
 test_acc_list = np.zeros(num_epochs)
 train_acc_list = np.zeros(num_epochs)
 val_id_acc_list = np.zeros(num_epochs)
+
 for epoch in range(0, num_epochs):
-        print('Inside Epoch : ', epoch )
+    print('Inside Epoch : ', epoch)
 
-        # train for one epoch
-        overall_loss_list, class_loss_list, class_acc_train = train_one_epoch(train_data_loader, model, class_loss_criterion, optimizer, epoch)
+    # Train for one epoch
+    overall_loss_list, class_loss_list, class_acc_train = train_one_epoch(train_data_loader, model, class_loss_criterion, optimizer, epoch)
 
-        # average loss through all iterations --> Avg loss of an epoch
-        overall_loss_epoch = sum(overall_loss_list)/len(overall_loss_list)
-        class_loss_epoch = sum(class_loss_list)/len(class_loss_list)
-        class_acc_epoch = sum(class_acc_train)/len(class_acc_train)
-        
-        writer.add_scalar("Overall Loss/train", overall_loss_epoch , epoch) 
-        writer.flush()
-        writer.add_scalar("Class Loss/train", class_loss_epoch, epoch) 
-        writer.flush()
-        writer.add_scalar("Accuracy/train", class_acc_epoch, epoch) 
-        writer.flush()
+    # Average loss through all iterations --> Avg loss of an epoch
+    overall_loss_epoch = sum(overall_loss_list)/len(overall_loss_list)
+    class_loss_epoch = sum(class_loss_list)/len(class_loss_list)
+    class_acc_epoch = sum(class_acc_train)/len(class_acc_train)
+    
+    writer.add_scalar("Overall Loss/train", overall_loss_epoch, epoch) 
+    writer.flush()
+    writer.add_scalar("Class Loss/train", class_loss_epoch, epoch) 
+    writer.flush()
+    writer.add_scalar("Accuracy/train", class_acc_epoch, epoch) 
+    writer.flush()
 
-        ## Evaluate every epoch for in-domain data in validation
-        class_loss_valid, class_acc_valid = evaluate_one_epoch(valid_dataloader_id, model, class_loss_criterion, optimizer, epoch)
-        val_id_acc_list[epoch] = class_acc_valid
-        writer.add_scalar("Accuracy/valid_id", class_acc_valid , epoch) 
-        writer.flush()
-        writer.add_scalar("Class Loss/valid_id", class_loss_valid, epoch) 
-        writer.flush()
+    # Evaluate every epoch for in-domain data in validation
+    class_loss_valid, class_acc_valid = evaluate_one_epoch(valid_dataloader_id, model, class_loss_criterion, optimizer, epoch)
+    val_id_acc_list[epoch] = class_acc_valid
+    writer.add_scalar("Accuracy/valid_id", class_acc_valid, epoch) 
+    writer.flush()
+    writer.add_scalar("Class Loss/valid_id", class_loss_valid, epoch) 
+    writer.flush()
 
-        ## Evaluate every epoch for out-of-domain data in validation
-        class_loss_valid_ood, class_acc_valid_ood = evaluate_ood_one_epoch(valid_dataloader_ood, model, class_loss_criterion)
-        writer.add_scalar("Accuracy/valid_ood", class_acc_valid_ood , epoch) 
-        writer.flush()
-        writer.add_scalar("Class Loss/valid_ood", class_loss_valid_ood, epoch) 
-        writer.flush()
+    # Evaluate every epoch for out-of-domain data in validation
+    class_loss_valid_ood, class_acc_valid_ood = evaluate_ood_one_epoch(valid_dataloader_ood, model, class_loss_criterion)
+    writer.add_scalar("Accuracy/valid_ood", class_acc_valid_ood, epoch) 
+    writer.flush()
+    writer.add_scalar("Class Loss/valid_ood", class_loss_valid_ood, epoch) 
+    writer.flush()
 
-        class_loss_trg, class_acc_trg = evaluate_ood_one_epoch(target_dataloader, model, class_loss_criterion)
-        writer.add_scalar("Accuracy/target", class_acc_trg , epoch) 
-        test_acc_list[epoch] = class_acc_trg
-        writer.flush()
+    # Save the best model based on validation OOD performance
+    if class_acc_valid_ood > best_val_ood_acc:
+        best_val_ood_acc = class_acc_valid_ood
+        best_epoch = epoch
         save_checkpoint({
             'epoch': epoch + 1,
             'state_dict': model.state_dict(),
-            'optimizer' : optimizer.state_dict(),
-        }, filename=model_chkpt_pth +'baseline_{:04d}.pth.tar'.format(epoch))
+            'optimizer': optimizer.state_dict(),
+        }, filename=model_chkpt_pth + 'best_val_ood_model.pth.tar')
 
+    # Evaluate on target dataset and log accuracy
+    class_loss_trg, class_acc_trg = evaluate_ood_one_epoch(target_dataloader, model, class_loss_criterion)
+    writer.add_scalar("Accuracy/target", class_acc_trg, epoch) 
+    test_acc_list[epoch] = class_acc_trg
+    writer.flush()
 
+# After training, load the best model and evaluate on target dataset
+# Create a new model instance
+best_model = phaser_nontf(device=device, cfg=dataset_cfg, 
+                          num_class=dataset_cfg.num_classes, 
+                          c=c, lastAct=None).to(device)
 
+# Load the best model checkpoint
+checkpoint = torch.load(model_chkpt_pth + 'best_val_ood_model.pth.tar')
+best_model.load_state_dict(checkpoint['state_dict'])
+
+# Evaluate the best model on the target dataset
+class_loss_trg, class_acc_trg = evaluate_ood_one_epoch(target_dataloader, best_model, class_loss_criterion)
+print(f'Best Epoch: {best_epoch}')
+print(f'Best Validation OOD Accuracy: {best_val_ood_acc}')
+print(f'Target Class Accuracy with Best Model: {class_acc_trg}')
 
 writer.close()
-class_loss_trg, class_acc_trg = evaluate_ood_one_epoch(target_dataloader, model, class_loss_criterion)
-print('Target Class Acc : ', class_acc_trg)
 
 # Write the test accuracy to a csv file
 df = pd.DataFrame()

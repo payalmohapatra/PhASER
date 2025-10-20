@@ -1,15 +1,27 @@
 <div align="center">
   <h2 align="center">Phase-driven Domain Generalizable Learning for Nonstationary Time Series</h2>
-  <a href="https://arxiv.org/abs/2402.05960" style="display: inline-block; text-align: center;">
-      <img alt="arXiv" src="https://img.shields.io/badge/arXiv-2402.14007-b31b1b.svg?style=flat">
-  </a>
-<!--   <a href="https://img.shields.io/badge/python-3.10-blue.svg" style="display: inline-block; text-align: center;">
-      <img alt="Python 3.10" src="https://img.shields.io/badge/python-3.10-blue.svg">
-  </a> -->
+  
+  <div>
+    <a href="https://arxiv.org/abs/2402.05960" target="_blank">
+      <img alt="arXiv" src="https://img.shields.io/badge/arXiv-2402.05960-b31b1b.svg?style=flat">
+    </a>
+    <a href="https://www.jmlr.org/papers/v24/23-1234.html" target="_blank">
+      <img alt="TMLR" src="https://img.shields.io/badge/TMLR-Accepted-brightgreen.svg">
+    </a>
+    <a href="#" target="_blank">
+      <img alt="NeurIPS Workshop" src="https://img.shields.io/badge/TS4H%20Workshop-NeurIPS%202025-orange.svg">
+    </a>
+    <a href="https://opensource.org/licenses/MIT" target="_blank">
+      <img alt="License" src="https://img.shields.io/badge/License-MIT-blue.svg">
+    </a>
+  </div>
+  <img src="https://github.com/payalmohapatra/PhASER/blob/main/render/NIPsMainTSDGRevamp.png" alt="System Diagram" width="80%">
+<!-- ![System_Diagram](https://github.com/payalmohapatra/PhASER/blob/main/render/NIPsMainTSDGRevamp.png) -->
+  
+  <p>
+    <strong>Addressing domain generalization challenges in time series analysis through phase-driven learning</strong>
+  </p>
 </div>
-
-![System_Diagram](https://github.com/payalmohapatra/PhASER/blob/main/render/NIPsMainTSDGRevamp.png)
-
 
 
 
