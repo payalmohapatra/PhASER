@@ -15,7 +15,7 @@
       <img alt="License" src="https://img.shields.io/badge/License-MIT-blue.svg">
     </a>
   </div>
-  <img src="https://github.com/payalmohapatra/PhASER/blob/main/render/NIPsMainTSDGRevamp.png" alt="System Diagram" width="80%">
+  <img src="https://github.com/payalmohapatra/PhASER/blob/main/render/TMLRMainTSDGRevamp.drawio.png" alt="System Diagram" width="80%">
 <!-- ![System_Diagram](https://github.com/payalmohapatra/PhASER/blob/main/render/NIPsMainTSDGRevamp.png) -->
   
   <p>
