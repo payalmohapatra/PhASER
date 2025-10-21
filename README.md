@@ -65,25 +65,25 @@ The dataset can be obtained at the following sources : <br>
 The main scripts to train a PhASER can be run using the following command to reproduce results in the Tables 2-4. The args.scenario and args.seed_num can be updated for the various combinations. args.scenario defines the various out-of-domain settings. After downloading the respective datasets, the path can be provided using args.dataset_pth.
 ## WISDM
 ```
-python PhASER_HAR.py --har_type='WISDM' --dataset_pth='/processed_data/WISDM/' --scenario='S1' --seed_num=2711 --num_epochs=30
+python PhASER_WISDM.py  --dataset_pth='/processed_data/WISDM/' --scenario='S1' --seed_num=2711 --num_epochs=30
 
 ```
 ## HHAR
 
 ### Cross Person setting
 ```
-python PhASER_HAR.py --har_type='HHAR' --dataset_pth='/processed_data/HHAR/' --scenario='S1' --seed_num=2711 --num_epochs=30
+python PhASER_HHAR.py --dataset_pth='/processed_data/HHAR/' --scenario='S1' --seed_num=2711 --num_epochs=30
 ```
 ### One-to-Another setting
 For the cross person setting update args.oot (instead of args.scenario) to train the model using various single person domains.
 ```
-python PhASER_HAR.py --har_type='HHAR_one_to_x' --dataset_pth='/processed_data/HHAR/' --oot=0 --seed_num=2711 --num_epochs=30 
+python PhASER_HHAR.py --dataset_pth='/processed_data/HHAR/' --oot=0 --seed_num=2711 --num_epochs=30 
 ```
 
 
 ## UCIHAR
 ```
-python PhASER_HAR.py --har_type='UCIHAR' --dataset_pth='/processed_data/UCIHAR/' --scenario='S1' --seed_num=2711 --num_epochs=30
+python PhASER_HHAR.py --dataset_pth='/processed_data/UCIHAR/' --scenario='S1' --seed_num=2711 --num_epochs=30
 ```
 
 ## GR
@@ -101,6 +101,14 @@ python PhASER_EEG.py --seed_num=2711 --scenario='S1' --num_epochs=20
 All the results are written as a *.csv file at the end for offline analyses.
 
 
-# TODO :
-* Add citation details here.
-* Any additional notebooks that others may find useful?
+# Citation
+```
+@article{mohapatra2025phaser,
+  title={Phase-driven domain generalizable learning for nonstationary time series},
+  author={Mohapatra, Payal and Wang, Lixu and Zhu, Qi},
+  journal = {Transactions on Machine Learning Research (TMLR)},
+  year = {2025},
+  url = {https://openreview.net/forum?id=cb3nwoqLdd}
+}
+```
+
