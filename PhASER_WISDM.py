@@ -26,19 +26,20 @@ from helper_function import set_seed, save_checkpoint
 
 
 ## Import the dataset configs
-from dataset_cfg import EEG, __eeg_scenarios__
+from dataset_cfg import WISDM, __wisdm_scenarios__, HHAR, __hhar_scenarios__, UCIHAR, __ucihar_scenarios__
+
 ##################################################################################################
 # Add arguments you want to pass via commandline
 ##################################################################################################
 parser = argparse.ArgumentParser(description='TSDG')
-parser.add_argument('--log_comment', default='TSDG:: Phase broadcasting EEG dataset', type=str,
+parser.add_argument('--log_comment', default='TSDG:: Phase broadcasting UCIHAR dataset', type=str,
                     metavar='N',
                     )
-parser.add_argument('--chkpt_pth', default='model_chkpt_eeg/', type=str,
+parser.add_argument('--chkpt_pth', default='model_chkpt_wisdm/', type=str,
                     metavar='N',
                     help='which checkpoint do you wanna use to extract embeddings?')
 
-parser.add_argument('--num_epochs', default=50, type=int,
+parser.add_argument('--num_epochs', default=10, type=int,
                     metavar='N',
                     )
 parser.add_argument('--cuda_pick', default='cuda:5', type=str,
@@ -50,16 +51,21 @@ parser.add_argument('--nperseg_k', default=0.125, type=float,
 parser.add_argument('--scenario', default='S1', type=str,
                     metavar='N',
                     )
-
 parser.add_argument('--model_c', default=4, type=int,
                     metavar='N',
                     )
-
 parser.add_argument('--seed_num', default=2711, type=int,
                     metavar='N',
                     )
+parser.add_argument('--oot', default=0, type=int,
+                    metavar='Apply when you want to do one-to-x generalization.',
+                    )
 
-parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Raw_Data/EEG/EEG/', type=str, metavar='N', help='path to your dataset folder.')
+
+parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Raw_Data/WISDM/', type=str,
+                    metavar='N',
+                    help='path to your dataset folder.')
+
 
 args = parser.parse_args()
 
@@ -70,8 +76,11 @@ cuda_pick = args.cuda_pick
 k = args.nperseg_k
 c = args.model_c
 scenario = args.scenario
-seed_num = args.seed_num    
+seed_num = args.seed_num
+har_type = 'WISDM'
 data_path = args.dataset_pth
+oot = args.oot
+
 
 
 ##################################################################################################
@@ -80,12 +89,62 @@ device = torch.device(cuda_pick if torch.cuda.is_available() else "cpu")
 print(device)
 ##################################################################################################
 # List all the parameter that need update here so that you can make an argparse later
-dataset_cfg = EEG()
-__eeg_scenarios__(dataset_cfg, scenario)
+if har_type == 'HHAR' :
+    dataset_cfg = HHAR()
+    __hhar_scenarios__(dataset_cfg, scenario)
+elif har_type == 'UCIHAR' :
+    dataset_cfg = UCIHAR()
+    __ucihar_scenarios__(dataset_cfg, scenario)
+elif har_type == 'WISDM' :
+    dataset_cfg = WISDM()
+    __wisdm_scenarios__(dataset_cfg, scenario)
+elif har_type == 'HHAR_one_to_x' :
+    dataset_cfg = HHAR()
+    if (oot == 0) :
+        dataset_cfg.src_domains = np.array([0])
+        dataset_cfg.trg_domains = np.array(range(1,9))
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 1) :
+        dataset_cfg.src_domains = np.array([1])
+        dataset_cfg.trg_domains = np.array([0,2,3,4,5,6,7,8])
+        dataset_cfg.val_domains = np.array([1]) ## dont really need a valid here
+    elif (oot == 2) :
+        dataset_cfg.src_domains = np.array([2])
+        dataset_cfg.trg_domains = np.array([0,1,3,4,5,6,7,8])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 3) :
+        dataset_cfg.src_domains = np.array([3])
+        dataset_cfg.trg_domains = np.array([0,1,2,4,5,6,7,8])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 4) :
+        dataset_cfg.src_domains = np.array([4])
+        dataset_cfg.trg_domains = np.array([0,1,2,3,5,6,7,8])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 5) :
+        dataset_cfg.src_domains = np.array([5])
+        dataset_cfg.trg_domains = np.array([0,1,2,3,4,6,7,8])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 6) :
+        dataset_cfg.src_domains = np.array([6])
+        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,7,8])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 7) :
+        dataset_cfg.src_domains = np.array([7])
+        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,6,8])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+    elif (oot == 8) :
+        dataset_cfg.src_domains = np.array([8])
+        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,6,7])
+        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+
+
+
+print('HAR dataset is : ', har_type)
 print('Scenario is : ', scenario)
 print('Target domains are : ', dataset_cfg.trg_domains)
 print('Source domains are : ', dataset_cfg.src_domains)
 print('Valid domains are : ', dataset_cfg.val_domains)
+
 ##################################################################################################
 
 
@@ -165,19 +224,15 @@ class Load_Spectral_Dataset_TSDG(Dataset):
     def __getitem__(self, index):
         mag = self.mag[index]
         phase = self.phase[index]
-        # if self.transform:
-        #     x = self.transform(self.x_data[index].reshape(self.num_channels, -1, 1)).reshape(self.x_data[index].shape)
-
-        ## FIXME :: Check for the x_data samples size
         y = self.y_data[index] if self.y_data is not None else None
-        # return mag_phase, y, self.domain_id
-        # return mag, y, self.domain_id
         return mag, phase, y, self.domain_id
 
     def __len__(self):
         return self.n_samples
 
         
+
+
 
 def __create_unified_dataset__(domain_cfg, data_path, train_val_test_flag) :
     dataset_train = []
@@ -226,6 +281,7 @@ def __create_unified_dataset__(domain_cfg, data_path, train_val_test_flag) :
     
     if train_val_test_flag == 0 :
         # Use this test-set in source domains as a validation set for class based accuracy and model selection
+        # Then use the validation set from non-overlapping domains for overall model selection with DANN
         return dataset_train, dataset_test
     else :
         valid_dataset = torch.utils.data.ConcatDataset([dataset_train, dataset_test])
@@ -302,10 +358,10 @@ class phaser_nontf(torch.nn.Module):
     def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
         ################################ Mag Feature Encoder ################################
         out_m = self.conv1(mag)
-        # out_m = self.ssn1(out_m)
+        out_m = self.ssn1(out_m)
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
-        # out_p = self.ssn1(out_p)
+        out_p = self.ssn1(out_p)
         ################################ Fusion Encoder ################################
         out = torch.cat((out_m, out_p), dim=1)
         # out = self.conv1_fusion(out)
@@ -448,7 +504,6 @@ def train_one_epoch(train_loader, model, class_loss_criterion, optimizer, epoch)
 def evaluate_one_epoch(valid_loader, model, class_loss_criterion, optimizer, epoch):
     ## Assume there is no mini-batch in validation
     ## Batch Size is 1
-
     
     with torch.no_grad():
         correct_v = 0
@@ -508,13 +563,12 @@ def evaluate_ood_one_epoch(trgt_loader, model, class_loss_criterion):
         class_acc_valid = correct_v/len(class_loss_list)
     return class_loss_valid, class_acc_valid
 
-# Initialize variables to track the best model
-best_val_ood_acc = 0.0
-best_epoch = 0
-
 test_acc_list = np.zeros(num_epochs)
 train_acc_list = np.zeros(num_epochs)
 val_id_acc_list = np.zeros(num_epochs)
+# Initialize variables to track the best model
+best_val_ood_acc = 0.0
+best_epoch = 0
 
 for epoch in range(0, num_epochs):
     print('Inside Epoch : ', epoch)
@@ -559,7 +613,7 @@ for epoch in range(0, num_epochs):
             'optimizer': optimizer.state_dict(),
         }, filename=model_chkpt_pth + 'best_val_ood_model.pth.tar')
 
-    # Evaluate on target dataset and log accuracy
+    # Evaluate on target dataset and log accuracy --> Only for logging purpose (saving only using the best val ood acc  model)
     class_loss_trg, class_acc_trg = evaluate_ood_one_epoch(target_dataloader, model, class_loss_criterion)
     writer.add_scalar("Accuracy/target", class_acc_trg, epoch) 
     test_acc_list[epoch] = class_acc_trg
@@ -567,9 +621,7 @@ for epoch in range(0, num_epochs):
 
 # After training, load the best model and evaluate on target dataset
 # Create a new model instance
-best_model = phaser_nontf(device=device, cfg=dataset_cfg, 
-                          num_class=dataset_cfg.num_classes, 
-                          c=c, lastAct=None).to(device)
+best_model = phaser_nontf(device=device, cfg=dataset_cfg, num_class=dataset_cfg.num_classes, c=c, lastAct=None).to(device)
 
 # Load the best model checkpoint
 checkpoint = torch.load(model_chkpt_pth + 'best_val_ood_model.pth.tar')
@@ -581,10 +633,11 @@ print(f'Best Epoch: {best_epoch}')
 print(f'Best Validation OOD Accuracy: {best_val_ood_acc}')
 print(f'Target Class Accuracy with Best Model: {class_acc_trg}')
 
-writer.close()
-
 # Write the test accuracy to a csv file
 df = pd.DataFrame()
 df['target_ood'] = pd.DataFrame(test_acc_list)
 df['val_id'] = val_id_acc_list
-df.to_csv('eeg' +'_' + str(seed_num) + '_' + scenario + '.csv', index=False, header=True)
+if (har_type == 'HHAR_one_to_x'):
+    df.to_csv(har_type + '_' + str(seed_num) + '_' + str(oot) + '.csv', index=False, header=True)
+else:
+    df.to_csv(har_type + '_' + str(seed_num) + '_' + scenario + '.csv', index=False, header=True)

@@ -58,7 +58,7 @@ parser = argparse.ArgumentParser(description='PhASER :  Phase-Augmented Separate
 parser.add_argument('--log_comment', default='Phase broadcasting for EMG dataset', type=str,
                     metavar='N',
                     )
-parser.add_argument('--chkpt_pth', default='./model_chkpt/', type=str,
+parser.add_argument('--chkpt_pth', default='./model_chkpt_emg/', type=str,
                     metavar='N',
                     help='which checkpoint do you wanna use to extract embeddings?')
 
@@ -81,7 +81,7 @@ parser.add_argument('--seed_num', default=2711, type=int,
 parser.add_argument('--scenario', default='S1', type=str,
                     metavar='N',
                     )
-parser.add_argument('--dataset_pth', default='processed_data/EMG/', type=str,
+parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Processed_Data/EMG/', type=str,
                     metavar='N',
                     help='which checkpoint do you wanna use to extract embeddings?')
 
@@ -341,61 +341,142 @@ class phaser_tf(torch.nn.Module):
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         
-        self.fin = FrequencyInstanceNorm(129) # FIXME 
+        self.fin = FrequencyInstanceNorm(129) 
 
         self.lastLayer = nn.LogSoftmax(dim=1)
-
-        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, mag, phase):
         ################################ Mag Feature Encoder ################################
         out_m = self.conv1(mag)
-        out_m = self.relu(out_m)
         out_m = self.ssn1(out_m)
-
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
-        out_p = self.relu(out_p)
         ################################ Fusion Encoder ################################
         out = torch.cat((out_m, out_p), dim=1)
         out = self.conv1_fusion(out)
-        out = self.relu(out)
         ################################ Call the frequency feature encoder #############
         # f2
         #############################
+        # print("TransitionBlock :: Input shape is = ", np.shape(out))
         out = self.convfreqdw(out)
+        # print("TransitionBlock :: convfreqdw shape is = ", np.shape(out))
         out = self.bn1(out)
         out = self.relu(out)
+        # print("TransitionBlock :: Input to freq_dw_conv shape is = ", np.shape(out))
         out = self.freq_dw_conv(out)
+        # print("TransitionBlock :: Output of freq_dw_conv shape is = ", np.shape(out))
         out = self.ssn2(out)
+        # print("TransitionBlock :: Output of ssn shape is = ", np.shape(out))
         #############################
+        # auxilary = out
         auxilary = self.conv_magbroadcast(out_p)
-        auxilary = self.relu(auxilary)
+        # print("TransitionBlock :: Shape of out_mag is = ", np.shape(auxilary))
         out = out.mean(2, keepdim=True)  # frequency average pooling 
        
         out = torch.squeeze(out, dim=2)
+        # print("TransitionBlock :: Input to temporal transformer after squeeze is = ", np.shape(out))
         out = out.permute(2,0,1)
+        # print("TransitionBlock :: Input to temporal transformer after permute is = ", np.shape(out))
         out = self.temp_dw_conv_tf(out)
+        # print("TransitionBlock :: Output of temporal transformer is = ", np.shape(out))
         out = torch.unsqueeze(out, dim=2)
+        # print("TransitionBlock :: Output of temporal transformer after unsqueeze is = ", np.shape(out))
         out = out.permute(1,3,2,0)
+        # print("TransitionBlock :: Output of temporal transformer after permute is = ", np.shape(out))
         out = self.bn2(out)
         out = self.swish(out)
+        # print("TransitionBlock :: Input to conv1x1_2 shape is = ", np.shape(out))
         out = self.convtempdw(out)
         out = self.channel_drop(out)
+        # print("TransitionBlock :: Output of conv1x1_2 shape is = ", np.shape(out))
         #############################
 
         out = auxilary + out
         out = self.relu(out)
         out = self.fin(out)
+        # print("TransitionBlock :: Final out shape is = ", np.shape(out))
+        # breakpoint()
 
         out = self.maxpool(out)
+        # print("Main Function :: Output of block2_1 is : ", np.shape(out))
 
         out = self.clfHead(out)
+        # print("Main Function :: Output of block7_1 is : ", np.shape(out))
         out = self.avgpool(out)
+        # print("Main Function :: Output of block8_1 is : ", np.shape(out))
 
         clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
        
         clipwise_output = self.lastLayer(clipwise_output)
+        return clipwise_output
+
+## you may
+# class phaser_nontf(torch.nn.Module):
+#     def __init__(self, cfg, num_class, device, c=4, FINnorm=False, lastAct=None):
+#         super(phaser_nontf, self).__init__()
+#         self.lamb = 0.1
+#         self.lastAct = lastAct
+#         self.device = device
+#         c = 10 * c
+
+#         self.conv1 = nn.Conv2d(dataset_cfg.input_channels, 2 * c, 5, stride=(2, 2), padding=(2, 2))
+#         self.ssn1 = SubSpectralNorm(2 * c, 3)
+#         self.ssn2 = SubSpectralNorm(c, 3) 
+
+#         self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(2, 2), padding=(2, 2))
+        
+
+#         self.block1_1 = TransitionBlock(4 * c, c)
+#         self.block1_2 = BroadcastedBlock(c)
+
+#         self.conv_magbroadcast = nn.Conv2d( 2 * c, c, 5, stride=(1,1), padding='same')
+
+#         self.block2_1 = nn.MaxPool2d(2)
+
+#         self.block5_1 = TransitionBlock(int(c), int(2 * c))
+#         self.block5_2 = BroadcastedBlock(int(2 * c))
+
+#         self.block6_1 = TransitionBlock(int(2 * c), int(2.5 * c))
+#         self.block6_2 = BroadcastedBlock(int(2.5 * c))
+#         self.block6_3 = BroadcastedBlock(int(2.5 * c))
+
+#         self.block7_1 = nn.Conv2d(int(2.5 * c), num_class, 1)
+
+#         self.block8_1 = nn.AdaptiveAvgPool2d((1, 1))
+#         self.norm = FINnorm
+
+
+    def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
+        ################################ Mag Feature Encoder ################################
+        out_m = self.conv1(mag)
+        # out_m = self.ssn1(out_m)
+        ################################ Phase Feature Encoder ################################
+        out_p = self.conv1(phase)
+        # out_p = self.ssn1(out_p)
+        ################################ Fusion Encoder ################################
+        out = torch.cat((out_m, out_p), dim=1)
+        # out = self.conv1_fusion(out)
+        
+        out = self.block1_1(out)
+        out = self.block1_2(out)
+
+        ######## Phase residual 1####################
+        auxilary = self.conv_magbroadcast(out_p)
+        out = auxilary + out
+
+        out = self.block2_1(out)
+
+        out = self.block5_1(out)
+        out = self.block5_2(out)
+        out = self.block6_1(out)
+        out = self.block6_2(out)
+        out = self.block6_3(out)
+        out = self.block7_1(out)
+        out = self.block8_1(out)
+
+        clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
+        if self.lastAct == "softmax":
+            clipwise_output = self.lastLayer(clipwise_output)
         return clipwise_output
     
 ##################################################################################################

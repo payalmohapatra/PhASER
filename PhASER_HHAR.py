@@ -1,40 +1,21 @@
 # Utilities
-import string
 import sys
-import time
-import matplotlib.pyplot as plt
-import IPython.display as ipd
 import argparse
 import math
-from tqdm import tqdm 
-
-#from __future__ import print_function, division
 import os
 import torch
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-import os
-import glob
-import sklearn
-
-import random
 sys.path.append('./util/')
 sys.path.append('./processed_data/')
 ## General pytorch libraries
-import torchvision.models as models
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset, DataLoader
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from torchvision import transforms
 
-## Import audio related packages
+## Import signal processing packages
 from scipy.signal import stft, hilbert
 
 from phaser_models import *
@@ -51,7 +32,7 @@ from dataset_cfg import WISDM, __wisdm_scenarios__, HHAR, __hhar_scenarios__, UC
 # Add arguments you want to pass via commandline
 ##################################################################################################
 parser = argparse.ArgumentParser(description='TSDG')
-parser.add_argument('--log_comment', default='TSDG:: Phase broadcasting UCIHAR dataset', type=str,
+parser.add_argument('--log_comment', default='TSDG:: HHAR', type=str,
                     metavar='N',
                     )
 parser.add_argument('--chkpt_pth', default='model_chkpt/', type=str,
@@ -79,11 +60,8 @@ parser.add_argument('--seed_num', default=2711, type=int,
 parser.add_argument('--oot', default=0, type=int,
                     metavar='Apply when you want to do one-to-x generalization.',
                     )
-parser.add_argument('--har_type', default='HHAR', type=str,
-                    metavar='N',
-                    )
 
-parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Raw_Data/WISDM/WISDM/', type=str,
+parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Raw_Data/HHAR/HHAR_SA/', type=str,
                     metavar='N',
                     help='path to your dataset folder.')
 
@@ -98,7 +76,6 @@ k = args.nperseg_k
 c = args.model_c
 scenario = args.scenario
 seed_num = args.seed_num
-har_type = args.har_type
 data_path = args.dataset_pth
 oot = args.oot
 
@@ -110,6 +87,7 @@ device = torch.device(cuda_pick if torch.cuda.is_available() else "cpu")
 print(device)
 ##################################################################################################
 # List all the parameter that need update here so that you can make an argparse later
+har_type = 'HHAR'  ## Options are 'HHAR', 'UCIHAR', 'WISDM', 'HHAR_one_to_x'
 if har_type == 'HHAR' :
     dataset_cfg = HHAR()
     __hhar_scenarios__(dataset_cfg, scenario)
@@ -173,8 +151,6 @@ print('Valid domains are : ', dataset_cfg.val_domains)
 if not os.path.exists(args.chkpt_pth):
     os.makedirs(args.chkpt_pth)
 
-writer = SummaryWriter()
-writer = SummaryWriter('TSDG:STFT wo DANN')
 writer = SummaryWriter(comment=log_comment)
 
 ##################################################################################################
@@ -221,11 +197,12 @@ class Load_Spectral_Dataset_TSDG(Dataset):
         
         ## Extract STFT for each channel :: Using the scipy.signal.stft function we can directly process multivariate STFT
         # Calculate the STFT of the signal
-        f, t, Zxx = stft(x_aug,
-                         fs =dataset_cfg.sampling_rate,
-                         nperseg=dataset_cfg.window_size * k,
-                         nfft= 1024,
-                         )
+        _, _, Zxx = stft(
+            x_aug,
+            fs=dataset_cfg.sampling_rate,
+            nperseg=dataset_cfg.window_size * k,
+            nfft=1024,
+        )
         mag = np.abs(Zxx)
         phase = np.angle(Zxx) 
 
@@ -342,8 +319,94 @@ target_dataloader = torch.utils.data.DataLoader(dataset=trgt_dataset,
 ##################################################################################################
 ##************************* Model Design *****************************************************
 ##################################################################################################
-
 class phaser_nontf(torch.nn.Module):
+    # def __init__(self, cfg, num_class, device, c=4, FINnorm=False, lastAct=None):
+    #     super(phaser_nontf, self).__init__()
+    #         #     super(phaser_nontf, self).__init__()
+    #     self.lamb = 0.1
+    #     self.lastAct = lastAct
+    #     self.device = device
+    #     c = 10 * c
+
+    #     self.conv1 = nn.Conv2d(dataset_cfg.input_channels, 2 * c, 5, stride=(2, 2), padding=(2, 2))
+    #     self.ssn1 = SubSpectralNorm(2 * c, 3) #FIXME
+    #     self.ssn2 = SubSpectralNorm(c, 3) #FIXME
+
+    #     self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(2, 2), padding=(2, 2))
+        
+
+    #     self.block1_1 = TransitionBlock(4 * c, c)
+    #     self.block1_2 = BroadcastedBlock(c)
+
+    #     self.conv_magbroadcast = nn.Conv2d( 2 * c, c, 5, stride=(1,1), padding='same')
+
+    #     self.block2_1 = nn.MaxPool2d(2)
+
+    #     self.block5_1 = TransitionBlock(int(c), int(2 * c))
+    #     self.block5_2 = BroadcastedBlock(int(2 * c))
+
+    #     self.block6_1 = TransitionBlock(int(2 * c), int(2.5 * c))
+    #     self.block6_2 = BroadcastedBlock(int(2.5 * c))
+    #     self.block6_3 = BroadcastedBlock(int(2.5 * c))
+
+    #     self.block7_1 = nn.Conv2d(int(2.5 * c), num_class, 1)
+
+    #     self.block8_1 = nn.AdaptiveAvgPool2d((1, 1))
+    #     self.norm = FINnorm
+
+    #     # Create separate convolution layers for phase broadcast at different stages
+    #     self.conv_magbroadcast1 = nn.Conv2d(2 * c, c, 5, stride=(1,1), padding='same')
+    #     self.conv_magbroadcast5 = nn.Conv2d(2*c, 2 * c, 5, stride=(1,1), padding='same')
+    #     self.conv_magbroadcast6 = nn.Conv2d(int(2.5 * c), int(2.5 * c),  5, stride=(1,1), padding='same')
+
+    # def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
+    #     ################################ Mag Feature Encoder ################################
+    #     out_m = self.conv1(mag)
+    #     # out_m = self.ssn1(out_m)
+    #     ################################ Phase Feature Encoder ################################
+    #     out_p = self.conv1(phase)
+    #     # out_p = self.ssn1(out_p)
+    #     ################################ Fusion Encoder ################################
+    #     out = torch.cat((out_m, out_p), dim=1)
+
+    #     # Block 1
+    #     out = self.block1_1(out)
+    #     out = self.block1_2(out)
+
+    #     # Phase residual after Block 1
+    #     auxilary_p1 = self.conv_magbroadcast1(out_p)
+    #     print(auxilary_p1.shape, out.shape)
+    #     breakpoint()
+    #     out = auxilary_p1 + out
+
+    #     out = self.block2_1(out)
+
+    #     # Block 5
+    #     out = self.block5_1(out)
+    #     out = self.block5_2(out)
+
+    #     # Phase residual after Block 5
+    #     auxilary_p2 = self.conv_magbroadcast5(out_p)
+    #     print(auxilary_p2.shape, out.shape)
+    #     breakpoint()
+    #     out = auxilary_p2 + out
+
+    #     # Block 6
+    #     out = self.block6_1(out)
+    #     out = self.block6_2(out)
+    #     out = self.block6_3(out)
+
+    #     # Phase residual after Block 6
+    #     auxilary_p3 = self.conv_magbroadcast6(out_p)
+    #     out = auxilary_p3 + out
+
+    #     out = self.block7_1(out)
+    #     out = self.block8_1(out)
+
+    #     clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
+    #     if self.lastAct == "softmax":
+    #         clipwise_output = self.lastLayer(clipwise_output)
+    #     return clipwise_output
     def __init__(self, cfg, num_class, device, c=4, FINnorm=False, lastAct=None):
         super(phaser_nontf, self).__init__()
         self.lamb = 0.1
@@ -352,13 +415,13 @@ class phaser_nontf(torch.nn.Module):
         c = 10 * c
 
         self.conv1 = nn.Conv2d(dataset_cfg.input_channels, 2 * c, 5, stride=(2, 2), padding=(2, 2))
-        self.ssn1 = SubSpectralNorm(2 * c, 3) 
-        self.ssn2 = SubSpectralNorm(c, 3) 
+        self.ssn1 = SubSpectralNorm(2 * c, 3) #FIXME
+        self.ssn2 = SubSpectralNorm(c, 3) #FIXME
 
-        self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(1, 1), padding='same')
+        self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(2, 2), padding=(2, 2))
         
 
-        self.block1_1 = TransitionBlock(2 * c, c)
+        self.block1_1 = TransitionBlock(4 * c, c)
         self.block1_2 = BroadcastedBlock(c)
 
         self.conv_magbroadcast = nn.Conv2d( 2 * c, c, 5, stride=(1,1), padding='same')
@@ -368,10 +431,6 @@ class phaser_nontf(torch.nn.Module):
         self.block5_1 = TransitionBlock(int(c), int(2 * c))
         self.block5_2 = BroadcastedBlock(int(2 * c))
 
-        self.conv_magbroadcast2 = nn.Sequential(nn.Conv2d( 2 * c, 2 * c, 5, stride=(1,1), padding='same'),
-                                                nn.MaxPool2d(2)
-        )
-
         self.block6_1 = TransitionBlock(int(2 * c), int(2.5 * c))
         self.block6_2 = BroadcastedBlock(int(2.5 * c))
         self.block6_3 = BroadcastedBlock(int(2.5 * c))
@@ -380,54 +439,129 @@ class phaser_nontf(torch.nn.Module):
 
         self.block8_1 = nn.AdaptiveAvgPool2d((1, 1))
         self.norm = FINnorm
-        self.relu = nn.ReLU(inplace=True)
 
 
     def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
         ################################ Mag Feature Encoder ################################
         out_m = self.conv1(mag)
-        out_m = self.relu(out_m)
         out_m = self.ssn1(out_m)
-    
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
-        out_p = self.relu(out_p)
         out_p = self.ssn1(out_p)
         ################################ Fusion Encoder ################################
         out = torch.cat((out_m, out_p), dim=1)
-        out = self.conv1_fusion(out)
-        out = self.relu(out)
+        # out = self.conv1_fusion(out)
         
         out = self.block1_1(out)
         out = self.block1_2(out)
 
         ######## Phase residual 1####################
         auxilary = self.conv_magbroadcast(out_p)
-        auxilary = self.relu(auxilary)
         out = auxilary + out
-        
+
         out = self.block2_1(out)
 
         out = self.block5_1(out)
         out = self.block5_2(out)
-        
-        # ######## Phase residual 2####################
-        auxilary2 = self.conv_magbroadcast2(out_p)
-        auxilary2 = self.relu(auxilary2)
-        out = auxilary2 + out
-
         out = self.block6_1(out)
         out = self.block6_2(out)
         out = self.block6_3(out)
-        
         out = self.block7_1(out)
-        
         out = self.block8_1(out)
 
         clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
         if self.lastAct == "softmax":
             clipwise_output = self.lastLayer(clipwise_output)
         return clipwise_output
+
+
+
+
+# class phaser_nontf(torch.nn.Module):
+#     def __init__(self, cfg, num_class, device, c=4, FINnorm=False, lastAct=None):
+#         super(phaser_nontf, self).__init__()
+#         self.lamb = 0.1
+#         self.lastAct = lastAct
+#         self.device = device
+#         c = 10 * c
+
+#         self.conv1 = nn.Conv2d(dataset_cfg.input_channels, 2 * c, 5, stride=(2, 2), padding=(2, 2))
+#         self.ssn1 = SubSpectralNorm(2 * c, 3) 
+#         self.ssn2 = SubSpectralNorm(c, 3) 
+
+#         self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(1, 1), padding='same')
+        
+
+#         self.block1_1 = TransitionBlock(2 * c, c)
+#         self.block1_2 = BroadcastedBlock(c)
+
+#         self.conv_magbroadcast = nn.Conv2d( 2 * c, c, 5, stride=(1,1), padding='same')
+
+#         self.block2_1 = nn.MaxPool2d(2)
+
+#         self.block5_1 = TransitionBlock(int(c), int(2 * c))
+#         self.block5_2 = BroadcastedBlock(int(2 * c))
+
+#         self.conv_magbroadcast2 = nn.Sequential(nn.Conv2d( 2 * c, 2 * c, 5, stride=(1,1), padding='same'),
+#                                                 nn.MaxPool2d(2)
+#         )
+
+#         self.block6_1 = TransitionBlock(int(2 * c), int(2.5 * c))
+#         self.block6_2 = BroadcastedBlock(int(2.5 * c))
+#         self.block6_3 = BroadcastedBlock(int(2.5 * c))
+
+#         self.block7_1 = nn.Conv2d(int(2.5 * c), num_class, 1)
+
+#         self.block8_1 = nn.AdaptiveAvgPool2d((1, 1))
+#         self.norm = FINnorm
+#         self.relu = nn.ReLU(inplace=True)
+
+
+#     def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
+#         ################################ Mag Feature Encoder ################################
+#         out_m = self.conv1(mag)
+#         out_m = self.relu(out_m)
+#         out_m = self.ssn1(out_m)
+    
+#         ################################ Phase Feature Encoder ################################
+#         out_p = self.conv1(phase)
+#         out_p = self.relu(out_p)
+#         out_p = self.ssn1(out_p)
+#         ################################ Fusion Encoder ################################
+#         out = torch.cat((out_m, out_p), dim=1)
+#         out = self.conv1_fusion(out)
+#         out = self.relu(out)
+        
+#         out = self.block1_1(out)
+#         out = self.block1_2(out)
+
+#         ######## Phase residual 1####################
+#         auxilary = self.conv_magbroadcast(out_p)
+#         auxilary = self.relu(auxilary)
+#         out = auxilary + out
+        
+#         out = self.block2_1(out)
+
+#         out = self.block5_1(out)
+#         out = self.block5_2(out)
+        
+#         # ######## Phase residual 2####################
+#         auxilary2 = self.conv_magbroadcast2(out_p)
+#         auxilary2 = self.relu(auxilary2)
+#         out = auxilary2 + out
+
+#         out = self.block6_1(out)
+#         out = self.block6_2(out)
+#         out = self.block6_3(out)
+        
+#         out = self.block7_1(out)
+        
+#         out = self.block8_1(out)
+
+#         clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
+#         if self.lastAct == "softmax":
+#             clipwise_output = self.lastLayer(clipwise_output)
+#         return clipwise_output
     
 
 ##################################################################################################
