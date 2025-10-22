@@ -5,10 +5,10 @@
     <a href="https://arxiv.org/abs/2402.05960" target="_blank">
       <img alt="arXiv" src="https://img.shields.io/badge/arXiv-2402.05960-b31b1b.svg?style=flat">
     </a>
-    <a href="https://www.jmlr.org/papers/v24/23-1234.html" target="_blank">
+    <a href="https://openreview.net/forum?id=cb3nwoqLdd" target="_blank">
       <img alt="TMLR" src="https://img.shields.io/badge/TMLR-Accepted-brightgreen.svg">
     </a>
-    <a href="#" target="_blank">
+    <a href="https://timeseries4health.github.io/" target="_blank">
       <img alt="NeurIPS Workshop" src="https://img.shields.io/badge/TS4H%20Workshop-NeurIPS%202025-orange.svg">
     </a>
     <a href="https://opensource.org/licenses/MIT" target="_blank">
