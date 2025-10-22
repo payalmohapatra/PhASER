@@ -1,12 +1,18 @@
 <div align="center">
 
 <!-- Header with TMLR logo and title -->
-<div style="display: flex; align-items: center; justify-content: center; gap: 16px;">
-  <img src="render/tmlr_logo.png" alt="TMLR Logo" height="70">
-  <h1 style="margin: 0;">
-    PhASER: Phase-driven Generalizable Representation Learning for Nonstationary Time Series Classification
-  </h1>
-</div>
+<table style="border: none;">
+  <tr>
+    <td style="border: none;" width="80">
+      <img src="render/tmlr_logo.png" alt="TMLR Logo" height="70">
+    </td>
+    <td style="border: none;">
+      <h1 style="margin: 0;">
+        PhASER: Phase-driven Generalizable Representation Learning for Nonstationary Time Series Classification
+      </h1>
+    </td>
+  </tr>
+</table>
 
 <br>
 
@@ -15,7 +21,7 @@
     <img alt="arXiv" src="https://img.shields.io/badge/arXiv-2402.05960-b31b1b.svg?style=flat">
   </a>
   <a href="https://openreview.net/forum?id=cb3nwoqLdd" target="_blank">
-    <img alt="TMLR" src="https://img.shields.io/badge/TMLR-Accepted-brightgreen.svg">
+    <img alt="TMLR" src="https://img.shields.io/badge/TMLR-Openreview-brightgreen.svg">
   </a>
   <a href="https://timeseries4health.github.io/" target="_blank">
     <img alt="NeurIPS Workshop" src="https://img.shields.io/badge/TS4H%20Workshop-NeurIPS%202025-orange.svg">
