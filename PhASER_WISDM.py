@@ -32,7 +32,7 @@ from dataset_cfg import WISDM, __wisdm_scenarios__, HHAR, __hhar_scenarios__, UC
 # Add arguments you want to pass via commandline
 ##################################################################################################
 parser = argparse.ArgumentParser(description='TSDG')
-parser.add_argument('--log_comment', default='TSDG:: Phase broadcasting UCIHAR dataset', type=str,
+parser.add_argument('--log_comment', default='TSDG:: Phase broadcasting WISDM dataset', type=str,
                     metavar='N',
                     )
 parser.add_argument('--chkpt_pth', default='model_chkpt_wisdm/', type=str,
@@ -62,7 +62,7 @@ parser.add_argument('--oot', default=0, type=int,
                     )
 
 
-parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Raw_Data/WISDM/', type=str,
+parser.add_argument('--dataset_pth', default='/home/payal/TSDG_2023/Raw_Data/WISDM/WISDM/', type=str,
                     metavar='N',
                     help='path to your dataset folder.')
 
@@ -77,7 +77,6 @@ k = args.nperseg_k
 c = args.model_c
 scenario = args.scenario
 seed_num = args.seed_num
-har_type = 'WISDM'
 data_path = args.dataset_pth
 oot = args.oot
 
@@ -87,55 +86,10 @@ oot = args.oot
 set_seed(seed_num)
 device = torch.device(cuda_pick if torch.cuda.is_available() else "cpu")
 print(device)
-##################################################################################################
-# List all the parameter that need update here so that you can make an argparse later
-if har_type == 'HHAR' :
-    dataset_cfg = HHAR()
-    __hhar_scenarios__(dataset_cfg, scenario)
-elif har_type == 'UCIHAR' :
-    dataset_cfg = UCIHAR()
-    __ucihar_scenarios__(dataset_cfg, scenario)
-elif har_type == 'WISDM' :
-    dataset_cfg = WISDM()
-    __wisdm_scenarios__(dataset_cfg, scenario)
-elif har_type == 'HHAR_one_to_x' :
-    dataset_cfg = HHAR()
-    if (oot == 0) :
-        dataset_cfg.src_domains = np.array([0])
-        dataset_cfg.trg_domains = np.array(range(1,9))
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 1) :
-        dataset_cfg.src_domains = np.array([1])
-        dataset_cfg.trg_domains = np.array([0,2,3,4,5,6,7,8])
-        dataset_cfg.val_domains = np.array([1]) ## dont really need a valid here
-    elif (oot == 2) :
-        dataset_cfg.src_domains = np.array([2])
-        dataset_cfg.trg_domains = np.array([0,1,3,4,5,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 3) :
-        dataset_cfg.src_domains = np.array([3])
-        dataset_cfg.trg_domains = np.array([0,1,2,4,5,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 4) :
-        dataset_cfg.src_domains = np.array([4])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,5,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 5) :
-        dataset_cfg.src_domains = np.array([5])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 6) :
-        dataset_cfg.src_domains = np.array([6])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 7) :
-        dataset_cfg.src_domains = np.array([7])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,6,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 8) :
-        dataset_cfg.src_domains = np.array([8])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,6,7])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
+
+har_type = 'WISDM'
+dataset_cfg = WISDM()
+__wisdm_scenarios__(dataset_cfg, scenario)
 
 
 
@@ -329,8 +283,8 @@ class phaser_nontf(torch.nn.Module):
         c = 10 * c
 
         self.conv1 = nn.Conv2d(dataset_cfg.input_channels, 2 * c, 5, stride=(2, 2), padding=(2, 2))
-        self.ssn1 = SubSpectralNorm(2 * c, 3) #FIXME
-        self.ssn2 = SubSpectralNorm(c, 3) #FIXME
+        self.ssn1 = SubSpectralNorm(2 * c, 3) 
+        self.ssn2 = SubSpectralNorm(c, 3) 
 
         self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(2, 2), padding=(2, 2))
         
@@ -358,13 +312,10 @@ class phaser_nontf(torch.nn.Module):
     def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
         ################################ Mag Feature Encoder ################################
         out_m = self.conv1(mag)
-        out_m = self.ssn1(out_m)
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
-        out_p = self.ssn1(out_p)
         ################################ Fusion Encoder ################################
         out = torch.cat((out_m, out_p), dim=1)
-        # out = self.conv1_fusion(out)
         
         out = self.block1_1(out)
         out = self.block1_2(out)

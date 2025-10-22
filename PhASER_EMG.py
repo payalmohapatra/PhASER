@@ -300,8 +300,8 @@ class phaser_tf(torch.nn.Module):
 
         self.conv1 = nn.Conv2d(input_channels, 2 * c, 5, stride=(2, 2), padding=(2, 2))
 
-        self.ssn1 = SubSpectralNorm(2 * c, 3) 
-        self.ssn2 = SubSpectralNorm(c, 3) 
+        self.ssn1 = SubSpectralNorm(2 * c, 3) #FIXME
+        self.ssn2 = SubSpectralNorm(c, 3) #FIXME
 
         self.conv1_fusion = nn.Conv2d(4*c, 2 * c, 5, stride=(2, 2), padding=(2, 2))
 
@@ -341,14 +341,16 @@ class phaser_tf(torch.nn.Module):
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         
-        self.fin = FrequencyInstanceNorm(129) 
+        self.fin = FrequencyInstanceNorm(129) # FIXME 
 
         self.lastLayer = nn.LogSoftmax(dim=1)
 
     def forward(self, mag, phase):
         ################################ Mag Feature Encoder ################################
+        # print('Shape of mag is : ', np.shape(mag))
         out_m = self.conv1(mag)
         out_m = self.ssn1(out_m)
+        # print('Shape of out_m is : ', np.shape(out_m))
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
         ################################ Fusion Encoder ################################
@@ -409,6 +411,7 @@ class phaser_tf(torch.nn.Module):
        
         clipwise_output = self.lastLayer(clipwise_output)
         return clipwise_output
+    
 
 ## you may
 # class phaser_nontf(torch.nn.Module):
@@ -446,38 +449,38 @@ class phaser_tf(torch.nn.Module):
 #         self.norm = FINnorm
 
 
-    def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
-        ################################ Mag Feature Encoder ################################
-        out_m = self.conv1(mag)
-        # out_m = self.ssn1(out_m)
-        ################################ Phase Feature Encoder ################################
-        out_p = self.conv1(phase)
-        # out_p = self.ssn1(out_p)
-        ################################ Fusion Encoder ################################
-        out = torch.cat((out_m, out_p), dim=1)
-        # out = self.conv1_fusion(out)
+    # def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
+    #     ################################ Mag Feature Encoder ################################
+    #     out_m = self.conv1(mag)
+    #     # out_m = self.ssn1(out_m)
+    #     ################################ Phase Feature Encoder ################################
+    #     out_p = self.conv1(phase)
+    #     # out_p = self.ssn1(out_p)
+    #     ################################ Fusion Encoder ################################
+    #     out = torch.cat((out_m, out_p), dim=1)
+    #     # out = self.conv1_fusion(out)
         
-        out = self.block1_1(out)
-        out = self.block1_2(out)
+    #     out = self.block1_1(out)
+    #     out = self.block1_2(out)
 
-        ######## Phase residual 1####################
-        auxilary = self.conv_magbroadcast(out_p)
-        out = auxilary + out
+    #     ######## Phase residual 1####################
+    #     auxilary = self.conv_magbroadcast(out_p)
+    #     out = auxilary + out
 
-        out = self.block2_1(out)
+    #     out = self.block2_1(out)
 
-        out = self.block5_1(out)
-        out = self.block5_2(out)
-        out = self.block6_1(out)
-        out = self.block6_2(out)
-        out = self.block6_3(out)
-        out = self.block7_1(out)
-        out = self.block8_1(out)
+    #     out = self.block5_1(out)
+    #     out = self.block5_2(out)
+    #     out = self.block6_1(out)
+    #     out = self.block6_2(out)
+    #     out = self.block6_3(out)
+    #     out = self.block7_1(out)
+    #     out = self.block8_1(out)
 
-        clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
-        if self.lastAct == "softmax":
-            clipwise_output = self.lastLayer(clipwise_output)
-        return clipwise_output
+    #     clipwise_output = torch.squeeze(torch.squeeze(out, dim=2), dim=2)
+    #     if self.lastAct == "softmax":
+    #         clipwise_output = self.lastLayer(clipwise_output)
+    #     return clipwise_output
     
 ##################################################################################################
 ##************************* Model Initialisation and Training *****************************************************

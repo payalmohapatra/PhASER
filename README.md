@@ -63,6 +63,7 @@ The dataset can be obtained at the following sources : <br>
 # 
 # Training scripts
 The main scripts to train a PhASER can be run using the following command to reproduce results in the Tables 2-4. The args.scenario and args.seed_num can be updated for the various combinations. args.scenario defines the various out-of-domain settings. After downloading the respective datasets, the path can be provided using args.dataset_pth.
+
 ## WISDM
 ```
 python PhASER_WISDM.py  --dataset_pth='/processed_data/WISDM/' --scenario='S1' --seed_num=2711 --num_epochs=30
@@ -83,7 +84,7 @@ python PhASER_HHAR.py --dataset_pth='/processed_data/HHAR/' --oot=0 --seed_num=2
 
 ## UCIHAR
 ```
-python PhASER_HHAR.py --dataset_pth='/processed_data/UCIHAR/' --scenario='S1' --seed_num=2711 --num_epochs=30
+python PhASER_UCIHAR.py --dataset_pth='/processed_data/UCIHAR/' --scenario='S1' --seed_num=2711 --num_epochs=30
 ```
 
 ## GR
@@ -112,3 +113,5 @@ All the results are written as a *.csv file at the end for offline analyses.
 }
 ```
 
+# Acknowledgement 
+We would like to thank the [AdATIMe benchmarking suite](https://github.com/emadeldeen24/AdaTime) for providing the domain-generalization data and processing utilities used in this project.

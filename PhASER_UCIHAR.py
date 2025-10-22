@@ -88,56 +88,9 @@ device = torch.device(cuda_pick if torch.cuda.is_available() else "cpu")
 print(device)
 ##################################################################################################
 # List all the parameter that need update here so that you can make an argparse later
-har_type = 'UCIHAR'  ## Options are 'HHAR', 'UCIHAR', 'WISDM', 'HHAR_one_to_x'
-if har_type == 'HHAR' :
-    dataset_cfg = HHAR()
-    __hhar_scenarios__(dataset_cfg, scenario)
-elif har_type == 'UCIHAR' :
-    dataset_cfg = UCIHAR()
-    __ucihar_scenarios__(dataset_cfg, scenario)
-elif har_type == 'WISDM' :
-    dataset_cfg = WISDM()
-    __wisdm_scenarios__(dataset_cfg, scenario)
-elif har_type == 'HHAR_one_to_x' :
-    dataset_cfg = HHAR()
-    if (oot == 0) :
-        dataset_cfg.src_domains = np.array([0])
-        dataset_cfg.trg_domains = np.array(range(1,9))
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 1) :
-        dataset_cfg.src_domains = np.array([1])
-        dataset_cfg.trg_domains = np.array([0,2,3,4,5,6,7,8])
-        dataset_cfg.val_domains = np.array([1]) ## dont really need a valid here
-    elif (oot == 2) :
-        dataset_cfg.src_domains = np.array([2])
-        dataset_cfg.trg_domains = np.array([0,1,3,4,5,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 3) :
-        dataset_cfg.src_domains = np.array([3])
-        dataset_cfg.trg_domains = np.array([0,1,2,4,5,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 4) :
-        dataset_cfg.src_domains = np.array([4])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,5,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 5) :
-        dataset_cfg.src_domains = np.array([5])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,6,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 6) :
-        dataset_cfg.src_domains = np.array([6])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,7,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 7) :
-        dataset_cfg.src_domains = np.array([7])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,6,8])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-    elif (oot == 8) :
-        dataset_cfg.src_domains = np.array([8])
-        dataset_cfg.trg_domains = np.array([0,1,2,3,4,5,6,7])
-        dataset_cfg.val_domains = np.array([0]) ## dont really need a valid here
-
-
+har_type = 'UCIHAR'  
+dataset_cfg = UCIHAR()
+__ucihar_scenarios__(dataset_cfg, scenario)
 
 print('HAR dataset is : ', har_type)
 print('Scenario is : ', scenario)
@@ -358,13 +311,11 @@ class phaser_nontf(torch.nn.Module):
     def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
         ################################ Mag Feature Encoder ################################
         out_m = self.conv1(mag)
-        # out_m = self.ssn1(out_m)
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
-        # out_p = self.ssn1(out_p)
         ################################ Fusion Encoder ################################
         out = torch.cat((out_m, out_p), dim=1)
-        # out = self.conv1_fusion(out)
+        out = self.conv1_fusion(out)
         
         out = self.block1_1(out)
         out = self.block1_2(out)

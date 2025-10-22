@@ -302,10 +302,8 @@ class phaser_nontf(torch.nn.Module):
     def forward(self, mag, phase, add_noise=False, training=False, noise_lambda=0.1, k=2):
         ################################ Mag Feature Encoder ################################
         out_m = self.conv1(mag)
-        # out_m = self.ssn1(out_m)
         ################################ Phase Feature Encoder ################################
         out_p = self.conv1(phase)
-        # out_p = self.ssn1(out_p)
         ################################ Fusion Encoder ################################
         out = torch.cat((out_m, out_p), dim=1)
         # out = self.conv1_fusion(out)
