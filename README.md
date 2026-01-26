@@ -124,12 +124,11 @@ python PhASER_EEG.py --seed_num=2711 --scenario='S1' --num_epochs=20
 
 If you find this work helpful, please cite:
 ```bibtex
-@article{mohapatra2025phaser,
-  title={Phase-driven domain generalizable learning for nonstationary time series},
+@@article{mohapatra2025phase,
+  title={Phase-driven Generalizable Representation Learning for Nonstationary Time Series Classification},
   author={Mohapatra, Payal and Wang, Lixu and Zhu, Qi},
-  journal={Transactions on Machine Learning Research (TMLR)},
-  year={2025},
-  url={https://openreview.net/forum?id=cb3nwoqLdd}
+  journal={Transactions on Machine Learning Research},
+  year={2025}
 }
 ```
 
